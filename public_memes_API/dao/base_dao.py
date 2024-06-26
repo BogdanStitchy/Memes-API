@@ -1,8 +1,8 @@
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import SQLAlchemyError
 
-from public_memes_API.db.base_model import async_session_maker
-from app.logger import logger
+from public_memes_API.db.db_base import async_session_maker
+from public_memes_API.logger import logger
 
 
 class BaseDAO:
