@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from time import time
 
-from public_memes_API.memes.router import router
+from public_memes_api.memes.router import router
 
-from public_memes_API import logger
+from public_memes_api.logger import logger
 
 app = FastAPI()
 

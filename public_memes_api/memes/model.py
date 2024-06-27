@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from public_memes_API.db import Base
+from public_memes_api.db.db_base import Base
 
 
 class Meme(Base):
