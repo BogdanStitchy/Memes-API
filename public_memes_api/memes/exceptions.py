@@ -28,3 +28,7 @@ class MemeImageException(MemeException):
 
 class MemeMetadataException(MemeException):
     detail = "Ошибка получения метаданных мема"
+
+
+class MemeImageDeleteException(MemeException):
+    detail = "Ошибка удаления изображения мема"
