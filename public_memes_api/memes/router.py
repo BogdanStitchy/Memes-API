@@ -9,8 +9,8 @@ from starlette.responses import StreamingResponse
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.memes.exceptions import AddingMemePictureException, AddingMemeMetadataException, \
-    IncorrectMemeIdException, MemeImageException
-from public_memes_api.memes.schemas import SMemeCreate
+    IncorrectMemeIdException, MemeImageException, MemeMetadataException
+from public_memes_api.memes.schemas import SMemeRead
 
 router = APIRouter(
     prefix="/memes",
@@ -27,10 +27,12 @@ router = APIRouter(
 @router.get("/{meme_id}")
 async def get_meme(meme_id: int) -> StreamingResponse:
     meme = await MemesDAO.find_by_id(meme_id)
-    print(f"{meme=}")
-    print(f"{type(meme)=}")
+
     if meme is None:
         raise IncorrectMemeIdException
+    if isinstance(meme, dict):
+        if "error" in meme:
+            raise MemeMetadataException
 
     image_name = f"{meme.id}_{meme.file_name}"
 
@@ -45,7 +47,23 @@ async def get_meme(meme_id: int) -> StreamingResponse:
     return StreamingResponse(BytesIO(response.content), media_type=content_type)
 
 
-@router.post("/meme")
+@router.get("/{meme_id}/metadata")
+async def get_meme(meme_id: int) -> SMemeRead:
+    meme = await MemesDAO.find_by_id(meme_id)
+    print(f"{meme=}")
+    print(f"{type(meme)=}")
+
+    if meme is None:
+        raise HTTPException(status_code=404, detail="Meme not found")
+
+    if isinstance(meme, dict):
+        if "error" in meme:
+            raise MemeMetadataException
+
+    return meme
+
+
+@router.post("/")
 async def create_meme(text: Optional[str], file: UploadFile = File(...)) -> int:
     id_added_meme: int = await MemesDAO.add(file_name=file.filename, text=text)
 
