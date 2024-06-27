@@ -1,8 +1,8 @@
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import SQLAlchemyError
 
-from public_memes_API.db.db_base import async_session_maker
-from public_memes_API.logger import logger
+from public_memes_api.db.db_base import async_session_maker
+from public_memes_api.logger import logger
 
 
 class BaseDAO:
@@ -70,12 +70,14 @@ class BaseDAO:
             return {"error": error.__str__()}
 
     @classmethod
-    async def add(cls, **data):
+    async def add(cls, **data) -> int:
         try:
             async with async_session_maker() as session:
-                query = insert(cls.model).values(**data)
-                await session.execute(query)
+                query = insert(cls.model).values(**data).returning(cls.model.id)
+                result = await session.execute(query)
                 await session.commit()
+                id_added_record = result.scalar_one()
+                return id_added_record
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
