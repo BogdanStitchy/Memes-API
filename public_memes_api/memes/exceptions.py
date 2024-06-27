@@ -14,7 +14,17 @@ class AddingMemeMetadataException(MemeException):
 
 
 class AddingMemePictureException(MemeException):
-    status_code = status.HTTP_400_BAD_REQUEST
     detail = "Ошибка добавления картинки"
 
 
+class IncorrectMemeIdException(MemeException):
+    status_code = status.HTTP_404_NOT_FOUND
+    detail = "Мем с заданным id не найден"
+
+
+class MemeImageException(MemeException):
+    detail = "Ошибка получения изображения мема"
+
+
+class MemeMetadataException(MemeException):
+    detail = "Ошибка получения метаданных мема"

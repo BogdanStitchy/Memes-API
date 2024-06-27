@@ -9,3 +9,7 @@ class SMemeBase(BaseModel):
 
 class SMemeRead(SMemeBase):
     id: int
+
+
+class SAddedId(BaseModel):
+    id_added_meme: int

@@ -1,16 +1,15 @@
 from io import BytesIO
-from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, UploadFile, File, Response, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Response, status
 from starlette.responses import StreamingResponse
 
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.memes.exceptions import AddingMemePictureException, AddingMemeMetadataException, \
     IncorrectMemeIdException, MemeImageException, MemeMetadataException
-from public_memes_api.memes.schemas import SMemeRead
+from public_memes_api.memes.schemas import SMemeRead, SAddedId
 
 router = APIRouter(
     prefix="/memes",
@@ -48,14 +47,11 @@ async def get_meme(meme_id: int) -> StreamingResponse:
 
 
 @router.get("/{meme_id}/metadata")
-async def get_meme(meme_id: int) -> SMemeRead:
+async def get_metadata_meme(meme_id: int) -> SMemeRead:
     meme = await MemesDAO.find_by_id(meme_id)
-    print(f"{meme=}")
-    print(f"{type(meme)=}")
 
     if meme is None:
         raise HTTPException(status_code=404, detail="Meme not found")
-
     if isinstance(meme, dict):
         if "error" in meme:
             raise MemeMetadataException
@@ -64,7 +60,7 @@ async def get_meme(meme_id: int) -> SMemeRead:
 
 
 @router.post("/")
-async def create_meme(text: Optional[str], file: UploadFile = File(...)) -> int:
+async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedId:
     id_added_meme: int = await MemesDAO.add(file_name=file.filename, text=text)
 
     if not isinstance(id_added_meme, int):
@@ -80,4 +76,4 @@ async def create_meme(text: Optional[str], file: UploadFile = File(...)) -> int:
         if response.status_code != 201:
             raise AddingMemePictureException
 
-    return id_added_meme
+    return SAddedId(id_added_meme=id_added_meme)
