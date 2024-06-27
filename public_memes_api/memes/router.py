@@ -8,7 +8,7 @@ from starlette.responses import StreamingResponse
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.memes.exceptions import AddingMemePictureException, AddingMemeMetadataException, \
-    IncorrectMemeIdException, MemeImageException, MemeMetadataException
+    IncorrectMemeIdException, MemeImageException, MemeMetadataException, MemeMetadataDeleteException
 from public_memes_api.memes.schemas import SMemeRead, SAddedId
 from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3
 
@@ -68,14 +68,6 @@ async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedI
         raise AddingMemeMetadataException
 
     new_name = f"{id_added_meme}_{file.filename}"
-
-    # async with httpx.AsyncClient() as client:  # Загрузка файла на приватный сервис
-    #     response = await client.post(
-    #         f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/upload",
-    #         files={"file": (new_name, file.file, file.content_type)}
-    #     )
-    #     if response.status_code != 201:
-    #         raise AddingMemePictureException
     await upload_image_to_s3(new_name, file)
 
     return SAddedId(id_added_meme=id_added_meme)
@@ -113,3 +105,25 @@ async def update_meme(
     await MemesDAO.update(meme_id, file_name=meme.file_name, text=meme.text)
 
     return Response(status_code=status.HTTP_200_OK)
+
+
+@router.delete("/{meme_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meme(meme_id: int, background_tasks: BackgroundTasks):
+    meme = await MemesDAO.find_by_id(meme_id)
+
+    if meme is None:
+        raise IncorrectMemeIdException
+    if isinstance(meme, dict):
+        if "error" in meme:
+            raise MemeMetadataException
+
+    image_name = f"{meme.id}_{meme.file_name}"
+
+    # Удаляем изображение в фоне
+    background_tasks.add_task(delete_image_from_s3, image_name)
+
+    result = await MemesDAO.delete(id=meme_id)
+    if result is None:
+        raise MemeMetadataDeleteException
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

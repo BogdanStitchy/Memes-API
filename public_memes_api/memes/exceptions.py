@@ -32,3 +32,7 @@ class MemeMetadataException(MemeException):
 
 class MemeImageDeleteException(MemeException):
     detail = "Ошибка удаления изображения мема"
+
+
+class MemeMetadataDeleteException(MemeException):
+    detail = "Ошибка удаления метаданных мема"
