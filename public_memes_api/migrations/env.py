@@ -8,9 +8,9 @@ from sqlalchemy import pool
 from alembic import context
 
 sys.path.insert(0, dirname(dirname(dirname(abspath(__file__)))))
-from public_memes_API.config.config import DATABASE_URL
-from public_memes_API.db import Base
-from public_memes_API.memes.model import Meme # noqa
+from public_memes_api.config.config import DATABASE_URL
+from public_memes_api.db.db_base import Base
+from public_memes_api.memes.model import Meme # noqa
 
 
 # this is the Alembic Config object, which provides
