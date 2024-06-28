@@ -3,7 +3,7 @@ from typing import Optional, List
 
 import asyncio
 import httpx
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Response, Request, status
+from fastapi import APIRouter, UploadFile, File, Response, Request, status
 from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
@@ -13,6 +13,7 @@ from public_memes_api.memes.exceptions import AddingMemeMetadataException, Incor
     MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException, DaoMethodException
 from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
 from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3, download_image_from_s3
+from public_memes_api.tasks.tasks import tasks_delete_image_from_s3
 
 router = APIRouter(
     prefix="/memes",
@@ -127,7 +128,6 @@ async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedI
 
 @router.put("/{meme_id}")
 async def update_meme(
-        background_tasks: BackgroundTasks,
         meme_id: int,
         text: Optional[str] = None,
         file: UploadFile = File(None)
@@ -146,7 +146,7 @@ async def update_meme(
         # чтобы не удалить новый мем, если имена обновленного и старого мема совпадают
         await upload_image_to_s3(new_image_name, file)
         if old_image_name != new_image_name:
-            background_tasks.add_task(delete_image_from_s3, old_image_name)  # Удаляем старое изображение в фоне
+            tasks_delete_image_from_s3.delay(old_image_name)  # Удалить изображение в фоне
 
         meme.file_name = file.filename
 
@@ -159,7 +159,7 @@ async def update_meme(
 
 
 @router.delete("/{meme_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_meme(meme_id: int, background_tasks: BackgroundTasks):
+async def delete_meme(meme_id: int):
     try:
         meme = await MemesDAO.find_by_id(meme_id)
         if meme is None:
@@ -169,8 +169,7 @@ async def delete_meme(meme_id: int, background_tasks: BackgroundTasks):
 
     image_name = f"{meme.id}_{meme.file_name}"
 
-    # Удаляем изображение в фоне
-    background_tasks.add_task(delete_image_from_s3, image_name)
+    tasks_delete_image_from_s3.delay(image_name)  # Удалить изображение в фоне
 
     result = await MemesDAO.delete(id=meme_id)
     if result is None:
