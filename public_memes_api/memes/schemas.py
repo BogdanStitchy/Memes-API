@@ -11,5 +11,9 @@ class SMemeRead(SMemeBase):
     id: int
 
 
+class SMemeReadWithUrl(SMemeRead):
+    image_url: str
+
+
 class SAddedId(BaseModel):
     id_added_meme: int

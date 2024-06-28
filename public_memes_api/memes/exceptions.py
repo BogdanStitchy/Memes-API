@@ -36,3 +36,8 @@ class MemeImageDeleteException(MemeException):
 
 class MemeMetadataDeleteException(MemeException):
     detail = "Ошибка удаления метаданных мема"
+
+
+class MemesNotFoundException(MemeException):
+    status_code = status.HTTP_404_NOT_FOUND
+    detail = "Метаданные мемов не найдены"

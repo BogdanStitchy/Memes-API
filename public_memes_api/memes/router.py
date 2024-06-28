@@ -1,16 +1,16 @@
 from io import BytesIO
-from typing import Optional
+from typing import Optional, List
 
 import asyncio
 import httpx
-from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Response, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Response, Request, status
 from starlette.responses import StreamingResponse
 
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.memes.exceptions import AddingMemePictureException, AddingMemeMetadataException, \
-    IncorrectMemeIdException, MemeImageException, MemeMetadataException, MemeMetadataDeleteException
-from public_memes_api.memes.schemas import SMemeRead, SAddedId
+    IncorrectMemeIdException, MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException
+from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
 from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3
 
 router = APIRouter(
@@ -19,10 +19,30 @@ router = APIRouter(
 )
 
 
-# @router.get("/memes")
-# async def get_memes(skip: int = 0, limit: int = 10):
-#     memes = await MemesDAO.get_memes_with_pagination(skip, limit)
-#     return memes
+@router.get("/")
+async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SMemeReadWithUrl]:
+    memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
+
+    if memes is None:
+        raise MemesNotFoundException
+    if isinstance(memes, dict):
+        if "error" in memes:
+            raise MemeMetadataException
+
+    base_url = request.url.scheme + "://" + request.headers['host']
+
+    result = [
+        SMemeReadWithUrl(
+            id=meme.id,
+            file_name=meme.file_name,
+            text=meme.text,
+            image_url=f"{base_url}{router.prefix}/{meme.id}"
+        )
+        for meme in memes
+    ]
+
+    return result
+
 
 @router.get("/batch_images")
 async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
@@ -83,7 +103,7 @@ async def get_metadata_meme(meme_id: int) -> SMemeRead:
     meme = await MemesDAO.find_by_id(meme_id)
 
     if meme is None:
-        raise HTTPException(status_code=404, detail="Meme not found")
+        raise IncorrectMemeIdException
     if isinstance(meme, dict):
         if "error" in meme:
             raise MemeMetadataException
