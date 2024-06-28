@@ -24,6 +24,7 @@ TEST_NAME_DB = os.environ['TEST_NAME_DB']
 TEST_HOST = os.environ['TEST_HOST']
 TEST_PORT = os.environ['TEST_PORT']
 
+HOST_REDIS = os.environ['HOST_REDIS']
 
 PRIVATE_MEDIA_SERVICE_URL = os.environ['PRIVATE_MEDIA_SERVICE_URL']
 

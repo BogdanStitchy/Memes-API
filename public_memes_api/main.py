@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Request
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 from time import time
+from redis import asyncio as aioredis
 
 from public_memes_api.memes.router import router
-
 from public_memes_api.logger import logger
+from public_memes_api.config.config import HOST_REDIS
 
 app = FastAPI()
 
@@ -20,3 +23,9 @@ async def add_process_time_header(request: Request, call_next):
         "process_time": round(process_time, 4)
     })
     return response
+
+
+@app.on_event("startup")
+async def startup():
+    redis = await aioredis.from_url(f"redis://{HOST_REDIS}", encoding="utf8", decode_responses=True)
+    FastAPICache.init(RedisBackend(redis), prefix="cache")

@@ -4,6 +4,7 @@ from typing import Optional, List
 import asyncio
 import httpx
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Response, Request, status
+from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
 from public_memes_api.memes.dao import MemesDAO
@@ -20,6 +21,7 @@ router = APIRouter(
 
 
 @router.get("/")
+@cache(expire=100)
 async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SMemeReadWithUrl]:
     try:
         memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
@@ -98,6 +100,7 @@ async def get_meme(meme_id: int) -> StreamingResponse:
 
 
 @router.get("/{meme_id}/metadata")
+@cache(expire=100)
 async def get_metadata_meme(meme_id: int) -> SMemeRead:
     try:
         meme = await MemesDAO.find_by_id(meme_id)
