@@ -2,10 +2,10 @@ import httpx
 from fastapi import UploadFile
 
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
-from public_memes_api.memes.exceptions import MemeImageDeleteException, AddingMemePictureException
+from public_memes_api.memes.exceptions import MemeImageDeleteException, AddingMemePictureException, MemeImageException
 
 
-async def delete_image_from_s3(image_name: str):
+async def delete_image_from_s3(image_name: str) -> None:
     print("Task Start")
     async with httpx.AsyncClient() as client:
         response = await client.delete(f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/delete/{image_name}")
@@ -14,7 +14,7 @@ async def delete_image_from_s3(image_name: str):
             raise MemeImageDeleteException
 
 
-async def upload_image_to_s3(image_name: str, file: UploadFile):
+async def upload_image_to_s3(image_name: str, file: UploadFile) -> None:
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/upload",
@@ -22,3 +22,13 @@ async def upload_image_to_s3(image_name: str, file: UploadFile):
         )
         if response.status_code != 201:
             raise AddingMemePictureException
+
+
+async def download_image_from_s3(image_name: str) -> httpx.Response:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/download/{image_name}")
+
+        if response.status_code != 200:
+            raise MemeImageException
+
+        return response

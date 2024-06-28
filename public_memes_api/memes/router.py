@@ -3,15 +3,15 @@ from typing import Optional, List
 
 import asyncio
 import httpx
-from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Response, Request, status
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Response, Request, status
 from starlette.responses import StreamingResponse
 
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
-from public_memes_api.memes.exceptions import AddingMemePictureException, AddingMemeMetadataException, \
-    IncorrectMemeIdException, MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException
+from public_memes_api.memes.exceptions import AddingMemeMetadataException, IncorrectMemeIdException, \
+    MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException
 from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
-from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3
+from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3, download_image_from_s3
 
 router = APIRouter(
     prefix="/memes",
@@ -46,7 +46,7 @@ async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SM
 
 @router.get("/batch_images")
 async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
-    # Swagger UI не отображает корректно multipart/mixed ответы
+    # !!! Swagger UI не отображает корректно multipart/mixed ответы
     memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
 
     async with httpx.AsyncClient() as client:
@@ -87,11 +87,7 @@ async def get_meme(meme_id: int) -> StreamingResponse:
 
     image_name = f"{meme.id}_{meme.file_name}"
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/download/{image_name}")
-
-        if response.status_code != 200:
-            raise MemeImageException
+    response = await download_image_from_s3(image_name)
 
     content_type = response.headers.get("content-type", "application/octet-stream")
 
