@@ -1,24 +1,32 @@
-from sqlalchemy import delete, insert, select
+from sqlalchemy import select, insert, delete
 from sqlalchemy.exc import SQLAlchemyError
 
+from typing import Any, Dict, List, Optional, Union
+from pydantic import validate_call
+import logging
+
 from public_memes_api.db.db_base import async_session_maker
-from public_memes_api.logger import logger
+from public_memes_api.memes.exceptions import DaoMethodException
+
+logger = logging.getLogger(__name__)
 
 
 class BaseDAO:
     model = None
 
     @classmethod
-    async def find_by_id(cls, model_id: int):
+    @validate_call
+    async def find_by_id(cls, model_id: int) -> Dict[str, Any]:
         try:
             async with async_session_maker() as session:
                 query = select(cls.model).filter_by(id=model_id)
                 result = await session.execute(query)
-                return result.scalar_one_or_none()
+                result = result.mappings().one()
+                return result[cls.model.__name__]
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
-            if isinstance(error, Exception):
+            else:
                 msg = "Unknown Exc"
             msg += ": Cannot find by id"
             extra = {
@@ -26,10 +34,11 @@ class BaseDAO:
                 "model_id": model_id
             }
             logger.error(msg, extra=extra, exc_info=True)
-            return {"error": error.__str__()}
+            raise DaoMethodException(error)
 
     @classmethod
-    async def find_one_or_none(cls, **filter_by):
+    @validate_call
+    async def find_one_or_none(cls, **filter_by) -> Optional[Dict[str, Any]]:
         try:
             async with async_session_maker() as session:
                 query = select(cls.model.__table__).filter_by(**filter_by)
@@ -38,7 +47,7 @@ class BaseDAO:
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
-            if isinstance(error, Exception):
+            else:
                 msg = "Unknown Exc"
             msg += ": Cannot find one or none by filter"
             extra = {
@@ -46,10 +55,11 @@ class BaseDAO:
                 "filter_by": filter_by
             }
             logger.error(msg, extra=extra, exc_info=True)
-            return {"error": error.__str__()}
+            raise DaoMethodException(error)
 
     @classmethod
-    async def get_all(cls, **filter_by):
+    @validate_call
+    async def get_all(cls, **filter_by) -> List[Dict[str, Any]]:
         try:
             async with async_session_maker() as session:
                 query = select(cls.model.__table__).filter_by(**filter_by)
@@ -59,7 +69,7 @@ class BaseDAO:
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
-            if isinstance(error, Exception):
+            else:
                 msg = "Unknown Exc"
             msg += ": Cannot get all objects by filter"
             extra = {
@@ -67,9 +77,10 @@ class BaseDAO:
                 "filter_by": filter_by
             }
             logger.error(msg, extra=extra, exc_info=True)
-            return {"error": error.__str__()}
+            raise DaoMethodException(error)
 
     @classmethod
+    @validate_call
     async def add(cls, **data) -> int:
         try:
             async with async_session_maker() as session:
@@ -81,7 +92,7 @@ class BaseDAO:
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
-            if isinstance(error, Exception):
+            else:
                 msg = "Unknown Exc"
             msg += ": Cannot add object"
             extra = {
@@ -89,10 +100,11 @@ class BaseDAO:
                 "data": data
             }
             logger.error(msg, extra=extra, exc_info=True)
-            return {"error": error.__str__()}
+            raise DaoMethodException(error)
 
     @classmethod
-    async def delete(cls, **filter_by):
+    @validate_call
+    async def delete(cls, **filter_by) -> int:
         try:
             async with async_session_maker() as session:
                 query = delete(cls.model).filter_by(**filter_by)
@@ -102,7 +114,7 @@ class BaseDAO:
         except (SQLAlchemyError, Exception) as error:
             if isinstance(error, SQLAlchemyError):
                 msg = "Database Exc"
-            if isinstance(error, Exception):
+            else:
                 msg = "Unknown Exc"
             msg += ": Cannot delete object by filter"
             extra = {
@@ -110,4 +122,4 @@ class BaseDAO:
                 "filter_by": filter_by
             }
             logger.error(msg, extra=extra, exc_info=True)
-            return {"error": error.__str__()}
+            raise DaoMethodException(error)

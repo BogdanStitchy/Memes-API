@@ -41,3 +41,7 @@ class MemeMetadataDeleteException(MemeException):
 class MemesNotFoundException(MemeException):
     status_code = status.HTTP_404_NOT_FOUND
     detail = "Метаданные мемов не найдены"
+
+
+class DaoMethodException(Exception):
+    pass

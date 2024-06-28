@@ -17,3 +17,12 @@ class SMemeReadWithUrl(SMemeRead):
 
 class SAddedId(BaseModel):
     id_added_meme: int
+
+
+class MemeInDB(SMemeBase):
+    id: int
+
+    # class Config:
+    #     orm_mode = True
+    #     from_attributes = True
+
