@@ -1,6 +1,7 @@
 from io import BytesIO
 from typing import Optional
 
+import asyncio
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Response, status
 from starlette.responses import StreamingResponse
@@ -22,6 +23,36 @@ router = APIRouter(
 # async def get_memes(skip: int = 0, limit: int = 10):
 #     memes = await MemesDAO.get_memes_with_pagination(skip, limit)
 #     return memes
+
+@router.get("/batch_images")
+async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
+    # Swagger UI не отображает корректно multipart/mixed ответы
+    memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
+
+    async with httpx.AsyncClient() as client:
+        tasks = [
+            client.get(f"{PRIVATE_MEDIA_SERVICE_URL}/s3_memes/download/{meme.id}_{meme.file_name}")
+            for meme in memes
+        ]
+        responses = await asyncio.gather(*tasks)
+
+    # Генератор для потоковой передачи нескольких файлов
+    async def file_stream():
+        for resp in responses:
+            if resp.status_code == 200:
+                yield b"--boundary\r\n"
+                yield b'Content-Type: %s\r\n' % resp.headers['content-type'].encode()
+                yield b'Content-Disposition: form-data; filename="%s"\r\n\r\n' % (resp.url.path.split('/')[-1].encode())
+                yield resp.content
+                yield b"\r\n"
+
+        yield b"--boundary--\r\n"
+
+    headers = {
+        'Content-Type': 'multipart/mixed; boundary=boundary',
+    }
+
+    return StreamingResponse(file_stream(), headers=headers)
 
 
 @router.get("/{meme_id}")
