@@ -48,7 +48,7 @@ class MemesDAO(BaseDAO):
                 result = await session.execute(query)
                 await session.commit()
                 updated_meme = result.mappings().one()
-                return updated_meme
+                return updated_meme[cls.model.__name__]
         except (SQLAlchemyError, Exception) as error:
             msg = "Database Exc" if isinstance(error, SQLAlchemyError) else "Unknown Exc"
             msg += ": Cannot update meme"
