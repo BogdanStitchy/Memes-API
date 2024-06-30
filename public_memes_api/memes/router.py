@@ -7,10 +7,13 @@ from fastapi import APIRouter, UploadFile, File, Response, Request, status
 from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
+from public_memes_api.logger import logger
 from public_memes_api.memes.dao import MemesDAO
+from public_memes_api.memes.dao_wrappers import MemesDAOWrappers
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.memes.exceptions import AddingMemeMetadataException, IncorrectMemeIdException, \
-    MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException, DaoMethodException
+    MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException, \
+    DaoMethodException, EndPointException
 from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
 from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3, download_image_from_s3
 from public_memes_api.tasks.tasks import tasks_delete_image_from_s3
@@ -24,12 +27,9 @@ router = APIRouter(
 @router.get("/")
 @cache(expire=100)
 async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SMemeReadWithUrl]:
-    try:
-        memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
-        if memes is None:
-            raise MemesNotFoundException
-    except DaoMethodException:
-        raise MemeMetadataException
+    memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
+    if memes is None:
+        raise MemesNotFoundException
 
     base_url = request.url.scheme + "://" + request.headers['host']
 
@@ -49,12 +49,9 @@ async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SM
 @router.get("/batch_images")
 async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
     # !!! Swagger UI не отображает корректно multipart/mixed ответы
-    try:
-        memes = await MemesDAO.get_memes_with_pagination(skip=skip, limit=limit)
-        if memes is None:
-            raise MemesNotFoundException
-    except DaoMethodException:
-        raise MemeMetadataException
+    memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
+    if memes is None:
+        raise MemesNotFoundException
 
     async with httpx.AsyncClient() as client:
         tasks = [
@@ -84,16 +81,12 @@ async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
 
 @router.get("/{meme_id}")
 async def get_meme(meme_id: int) -> StreamingResponse:
-    try:
-        meme = await MemesDAO.find_by_id(meme_id)
-        if meme is None:
-            raise IncorrectMemeIdException
-    except DaoMethodException:
-        raise MemeMetadataException
-
+    meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
+    if meme is None:
+        raise IncorrectMemeIdException
     image_name = f"{meme.id}_{meme.file_name}"
 
-    response = await download_image_from_s3(image_name)
+    response = await download_image_from_s3(image_name)  # добавить обработку ошибок
 
     content_type = response.headers.get("content-type", "application/octet-stream")
 
@@ -103,23 +96,16 @@ async def get_meme(meme_id: int) -> StreamingResponse:
 @router.get("/{meme_id}/metadata")
 @cache(expire=100)
 async def get_metadata_meme(meme_id: int) -> SMemeRead:
-    try:
-        meme = await MemesDAO.find_by_id(meme_id)
-        if meme is None:
-            raise IncorrectMemeIdException
-    except DaoMethodException:
-        raise MemeMetadataException
-
+    meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
+    if meme is None:
+        raise IncorrectMemeIdException
     return meme
 
 
 @router.post("/")
 async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedId:
-    try:
-        id_added_meme: int = await MemesDAO.add(file_name=file.filename, text=text)
-    except DaoMethodException:
-        raise AddingMemeMetadataException
-
+    id_added_meme: int = await MemesDAOWrappers.add_with_error_handling(file_name=file.filename,
+                                                                        text=text)  # await MemesDAO.add(file_name=file.filename, text=text)
     new_name = f"{id_added_meme}_{file.filename}"
     await upload_image_to_s3(new_name, file)
 
@@ -132,12 +118,9 @@ async def update_meme(
         text: Optional[str] = None,
         file: UploadFile = File(None)
 ):
-    try:
-        meme = await MemesDAO.find_by_id(meme_id)
-        if meme is None:
-            raise IncorrectMemeIdException
-    except DaoMethodException:
-        raise MemeMetadataException
+    meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)  # MemesDAO.find_by_id(meme_id)
+    if meme is None:
+        raise IncorrectMemeIdException
 
     if file:
         old_image_name = f"{meme.id}_{meme.file_name}"
@@ -153,25 +136,22 @@ async def update_meme(
     if text is not None:
         meme.text = text
 
-    await MemesDAO.update(meme_id, file_name=meme.file_name, text=meme.text)
+    await MemesDAOWrappers.update_with_error_handling(meme_id, file_name=meme.file_name, text=meme.text)
 
     return Response(status_code=status.HTTP_200_OK)
 
 
 @router.delete("/{meme_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meme(meme_id: int):
-    try:
-        meme = await MemesDAO.find_by_id(meme_id)
-        if meme is None:
-            raise IncorrectMemeIdException
-    except DaoMethodException:
-        raise MemeMetadataException
+    meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
+    if meme is None:
+        raise IncorrectMemeIdException
 
     image_name = f"{meme.id}_{meme.file_name}"
 
     tasks_delete_image_from_s3.delay(image_name)  # Удалить изображение в фоне
 
-    result = await MemesDAO.delete(id=meme_id)
+    result = await MemesDAOWrappers.delete_with_error_handling(id=meme_id)
     if result is None:
         raise MemeMetadataDeleteException
 
