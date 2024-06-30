@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -6,9 +7,15 @@ from redis import asyncio as aioredis
 
 from public_memes_api.memes.router import router
 from public_memes_api.logger import logger
-from public_memes_api.config.config import HOST_REDIS
+from public_memes_api.config.config import HOST_REDIS, SENTRY_DNS
 
 app = FastAPI()
+
+sentry_sdk.init(
+    dsn=SENTRY_DNS,
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 app.include_router(router)
 
