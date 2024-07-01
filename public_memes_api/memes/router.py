@@ -27,6 +27,12 @@ router = APIRouter(
 @router.get("/")
 @cache(expire=100)
 async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SMemeReadWithUrl]:
+    """
+        Получение списка мемов с постраничной разбивкой.
+
+        - **skip**: кол-во строк для пропуска
+        - **limit**: максимальное кол-во строк для возврата
+        """
     memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
     if memes is None:
         raise MemesNotFoundException
@@ -48,7 +54,14 @@ async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SM
 
 @router.get("/batch_images")
 async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
-    # !!! Swagger UI не отображает корректно multipart/mixed ответы
+    """
+        Получение нескольких изображений мемов (multipart/mixed) в одном запросе.
+
+        !!! Swagger UI не отображает корректно multipart/mixed ответы
+
+        - **skip**: кол-во строк для пропуска
+        - **limit**: максимальное кол-во строк для возврата
+        """
     memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
     if memes is None:
         raise MemesNotFoundException
@@ -81,6 +94,11 @@ async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
 
 @router.get("/{meme_id}")
 async def get_meme(meme_id: int) -> StreamingResponse:
+    """
+        Получение изображения мема по его ID.
+
+        - **meme_id**: ID мема
+        """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
         raise IncorrectMemeIdException
@@ -96,6 +114,11 @@ async def get_meme(meme_id: int) -> StreamingResponse:
 @router.get("/{meme_id}/metadata")
 @cache(expire=100)
 async def get_metadata_meme(meme_id: int) -> SMemeRead:
+    """
+        Получение метаданных мема по его ID.
+
+        - **meme_id**: ID мема
+        """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
         raise IncorrectMemeIdException
@@ -104,6 +127,12 @@ async def get_metadata_meme(meme_id: int) -> SMemeRead:
 
 @router.post("/")
 async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedId:
+    """
+        Добавление нового мема.
+
+        - **text**: Текст мема
+        - **file**: Файл изображения мема
+        """
     id_added_meme: int = await MemesDAOWrappers.add_with_error_handling(file_name=file.filename,
                                                                         text=text)  # await MemesDAO.add(file_name=file.filename, text=text)
     new_name = f"{id_added_meme}_{file.filename}"
@@ -118,6 +147,13 @@ async def update_meme(
         text: Optional[str] = None,
         file: UploadFile = File(None)
 ):
+    """
+        Обновление метаданных и/или изображения мема.
+
+        - **meme_id**: ID мема
+        - **text**: Новый текст мема
+        - **file**: Новый файл изображения мема
+        """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)  # MemesDAO.find_by_id(meme_id)
     if meme is None:
         raise IncorrectMemeIdException
@@ -143,6 +179,11 @@ async def update_meme(
 
 @router.delete("/{meme_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meme(meme_id: int):
+    """
+        Удаление мема по его ID.
+
+        - **meme_id**: ID мема
+        """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
         raise IncorrectMemeIdException
