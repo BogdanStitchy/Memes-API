@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Response, status
 from starlette.responses import StreamingResponse
 import mimetypes
 
-from private_media_service.memes.config_s3 import s3_client
+from private_media_service.s3_storage.config_s3 import s3_client
 
 router = APIRouter(
     prefix="/s3_memes",
@@ -49,4 +49,4 @@ async def delete_file(filename: str):
         s3_client.delete_object(Bucket="memes", Key=filename)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
