@@ -6,7 +6,10 @@ from time import time
 
 from prometheus_fastapi_instrumentator import Instrumentator
 from redis import asyncio as aioredis
+from sqladmin import Admin
 
+from public_memes_api.admin_panel.views import MemeAdmin
+from public_memes_api.db.db_base import engine
 from public_memes_api.memes.router import router
 from public_memes_api.logger import logger
 from public_memes_api.config.config import HOST_REDIS, SENTRY_DNS
@@ -26,6 +29,9 @@ instrumentator = Instrumentator(
     excluded_handlers=[".*admin.*", "/metrics"],  # игнорируемые эндпоинты
 )
 instrumentator.instrument(app).expose(app)  # Prometheus
+
+admin = Admin(app, engine)  # Админка
+admin.add_view(MemeAdmin)
 
 
 @app.middleware("http")
