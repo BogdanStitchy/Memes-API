@@ -3,6 +3,8 @@ from fastapi import FastAPI, Request
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from time import time
+
+from prometheus_fastapi_instrumentator import Instrumentator
 from redis import asyncio as aioredis
 
 from public_memes_api.memes.router import router
@@ -18,6 +20,12 @@ sentry_sdk.init(
 )
 
 app.include_router(router)
+
+instrumentator = Instrumentator(
+    should_group_status_codes=False,  # не группировать статусы ответа
+    excluded_handlers=[".*admin.*", "/metrics"],  # игнорируемые эндпоинты
+)
+instrumentator.instrument(app).expose(app)  # Prometheus
 
 
 @app.middleware("http")
