@@ -1,0 +1,96 @@
+services:
+  db:
+    image: postgres:15
+    container_name: memes_db
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+    env_file:
+      - .env-non-dev-public-service
+    ports:
+      - 5432:5432
+
+  minio:
+    image: minio/minio
+    volumes:
+      - minio_data:/data
+    ports:
+      - 9003:9003
+    env_file:
+      - .env-minio
+    command: server /data
+
+  redis:
+    image: redis:7
+    container_name: redis_memes_api
+
+  s3_memes:
+    build: ./private_media_service
+    container_name: s3_memes
+    env_file:
+      - .env-non-dev-private-service
+    command: sh -c "gunicorn private_media_service.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8001"
+    ports:
+      - 9002:8001
+    expose:
+      - "8001"
+    depends_on:
+      - db
+      - minio
+
+  api_memes:
+    build: ./public_memes_api
+    container_name: api_memes
+    env_file:
+      - .env-non-dev-public-service
+    command: sh -c "alembic -c public_memes_api/alembic.ini upgrade head && gunicorn public_memes_api.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000"
+    ports:
+      - 9001:8000
+    depends_on:
+      - db
+      - redis
+      - s3_memes
+
+  celery:
+    build: ./public_memes_api
+    container_name: celery_memes_api
+    command: sh -c "celery --app=public_memes_api.tasks.celery:celery worker -l INFO"
+    env_file:
+      - .env-non-dev-public-service
+    depends_on:
+      - redis
+
+  flower:
+    build: ./public_memes_api
+    container_name: flower_memes_api
+    command: sh -c "celery --app=public_memes_api.tasks.celery:celery flower"
+    env_file:
+      - .env-non-dev-public-service
+    depends_on:
+      - redis
+    ports:
+      - 5555:5555
+
+  prometheus:
+    image: prom/prometheus:v2.43.0
+    container_name: prometheus_memes_api
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheusdata:/prometheus
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana:9.4.7
+    container_name: grafana_memes_api
+    volumes:
+      - grafanadata:/var/lib/grafana
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+
+volumes:
+  postgresdata:
+  minio_data:
+  grafanadata:
+  prometheusdata:
