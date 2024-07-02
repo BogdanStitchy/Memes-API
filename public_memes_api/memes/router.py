@@ -11,8 +11,8 @@ from public_memes_api.logger import logger
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.memes.dao_wrappers import MemesDAOWrappers
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
-from public_memes_api.memes.exceptions import AddingMemeMetadataException, IncorrectMemeIdException, \
-    MemeImageException, MemeMetadataException, MemeMetadataDeleteException, MemesNotFoundException, \
+from public_memes_api.memes.exceptions import AddingMemeMetadataHTTTPException, IncorrectMemeIdHTTTPException, \
+    MemeImageHTTTPException, MemeMetadataHTTTPException, MemeMetadataDeleteHTTTPException, MemesNotFoundHTTTPException, \
     DaoMethodException, EndPointException
 from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
 from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3, download_image_from_s3
@@ -35,7 +35,7 @@ async def get_memes(request: Request, skip: int = 0, limit: int = 10) -> List[SM
         """
     memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
     if memes is None:
-        raise MemesNotFoundException
+        raise MemesNotFoundHTTTPException
 
     base_url = request.url.scheme + "://" + request.headers['host']
 
@@ -64,7 +64,7 @@ async def get_batch_images(skip: int = 0, limit: int = 10) -> StreamingResponse:
         """
     memes = await MemesDAOWrappers.get_with_pagination_with_error_handling(skip=skip, limit=limit)
     if memes is None:
-        raise MemesNotFoundException
+        raise MemesNotFoundHTTTPException
 
     async with httpx.AsyncClient() as client:
         tasks = [
@@ -101,10 +101,10 @@ async def get_meme(meme_id: int) -> StreamingResponse:
         """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
-        raise IncorrectMemeIdException
+        raise IncorrectMemeIdHTTTPException
     image_name = f"{meme.id}_{meme.file_name}"
 
-    response = await download_image_from_s3(image_name)  # добавить обработку ошибок
+    response = await download_image_from_s3(image_name)
 
     content_type = response.headers.get("content-type", "application/octet-stream")
 
@@ -121,7 +121,7 @@ async def get_metadata_meme(meme_id: int) -> SMemeRead:
         """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
-        raise IncorrectMemeIdException
+        raise IncorrectMemeIdHTTTPException
     return meme
 
 
@@ -134,7 +134,7 @@ async def add_meme(text: Optional[str], file: UploadFile = File(...)) -> SAddedI
         - **file**: Файл изображения мема
         """
     id_added_meme: int = await MemesDAOWrappers.add_with_error_handling(file_name=file.filename,
-                                                                        text=text)  # await MemesDAO.add(file_name=file.filename, text=text)
+                                                                        text=text)
     new_name = f"{id_added_meme}_{file.filename}"
     await upload_image_to_s3(new_name, file)
 
@@ -156,7 +156,7 @@ async def update_meme(
         """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)  # MemesDAO.find_by_id(meme_id)
     if meme is None:
-        raise IncorrectMemeIdException
+        raise IncorrectMemeIdHTTTPException
 
     if file:
         old_image_name = f"{meme.id}_{meme.file_name}"
@@ -186,7 +186,7 @@ async def delete_meme(meme_id: int):
         """
     meme = await MemesDAOWrappers.find_by_id_with_error_handling(meme_id)
     if meme is None:
-        raise IncorrectMemeIdException
+        raise IncorrectMemeIdHTTTPException
 
     image_name = f"{meme.id}_{meme.file_name}"
 
@@ -194,6 +194,6 @@ async def delete_meme(meme_id: int):
 
     result = await MemesDAOWrappers.delete_with_error_handling(id=meme_id)
     if result is None:
-        raise MemeMetadataDeleteException
+        raise MemeMetadataDeleteHTTTPException
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

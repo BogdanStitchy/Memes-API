@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 
 
-class MemeException(HTTPException):
+class MemeHTTTPException(HTTPException):
     status_code = 500
     detail = ""
 
@@ -9,39 +9,44 @@ class MemeException(HTTPException):
         super().__init__(status_code=self.status_code, detail=self.detail)
 
 
-class AddingMemeMetadataException(MemeException):
+class AddingMemeMetadataHTTTPException(MemeHTTTPException):
     detail = "Ошибка добавления метаданных"
 
 
-class AddingMemePictureException(MemeException):
+class AddingMemePictureHTTTPException(MemeHTTTPException):
     detail = "Ошибка добавления картинки"
 
 
-class IncorrectMemeIdException(MemeException):
+class IncorrectMemeIdHTTTPException(MemeHTTTPException):
     status_code = status.HTTP_404_NOT_FOUND
     detail = "Мем с заданным id не найден"
 
 
-class MemeImageException(MemeException):
+class MemeImageHTTTPException(MemeHTTTPException):
     detail = "Ошибка получения изображения мема"
 
 
-class MemeMetadataException(MemeException):
+class MemeMetadataHTTTPException(MemeHTTTPException):
     detail = "Ошибка получения метаданных мема"
 
 
-class MemeImageDeleteException(MemeException):
+class MemeImageDeleteHTTTPException(MemeHTTTPException):
     detail = "Ошибка удаления изображения мема"
 
 
-class MemeMetadataDeleteException(MemeException):
+class MemeMetadataDeleteHTTTPException(MemeHTTTPException):
     detail = "Ошибка удаления метаданных мема"
 
 
-class MemesNotFoundException(MemeException):
+class MemesNotFoundHTTTPException(MemeHTTTPException):
     status_code = status.HTTP_404_NOT_FOUND
     detail = "Метаданные мемов не найдены"
 
 
 class DaoMethodException(Exception):
     pass
+
+
+class EndPointException(HTTPException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = "Ошибка сервера"
