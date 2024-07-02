@@ -1,12 +1,12 @@
 FROM python:3.11
 
-RUN mkdir /private_media_service
+RUN mkdir /public_memes_api
 
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-COPY . /private_media_service
+COPY . /public_memes_api
 
 # комментарий ниже для docker compose, если запускать docker, то раскоментировать строку ниже
-#CMD ["gunicorn", "private_media_service.main:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8001"]
+#CMD ["sh", "-c", "gunicorn public_memes_api.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"]
