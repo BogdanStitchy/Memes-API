@@ -1,21 +1,26 @@
-from io import BytesIO
-from typing import Optional, List
-
 import asyncio
+from io import BytesIO
+from typing import List, Optional
+
 import httpx
-from fastapi import APIRouter, UploadFile, File, Response, Request, status
+from fastapi import APIRouter, File, Request, Response, UploadFile, status
 from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
+from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
 from public_memes_api.logger import logger
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.memes.dao_wrappers import MemesDAOWrappers
-from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
-from public_memes_api.memes.exceptions import AddingMemeMetadataHTTTPException, IncorrectMemeIdHTTTPException, \
-    MemeImageHTTTPException, MemeMetadataHTTTPException, MemeMetadataDeleteHTTTPException, MemesNotFoundHTTTPException, \
-    DaoMethodException, EndPointException
-from public_memes_api.memes.schemas import SMemeRead, SAddedId, SMemeReadWithUrl
-from public_memes_api.memes.utils_s3 import upload_image_to_s3, delete_image_from_s3, download_image_from_s3
+from public_memes_api.memes.exceptions import (
+    AddingMemeMetadataHTTTPException, DaoMethodException, EndPointException,
+    IncorrectMemeIdHTTTPException, MemeImageHTTTPException,
+    MemeMetadataDeleteHTTTPException, MemeMetadataHTTTPException,
+    MemesNotFoundHTTTPException)
+from public_memes_api.memes.schemas import (SAddedId, SMemeRead,
+                                            SMemeReadWithUrl)
+from public_memes_api.memes.utils_s3 import (delete_image_from_s3,
+                                             download_image_from_s3,
+                                             upload_image_to_s3)
 from public_memes_api.tasks.tasks import tasks_delete_image_from_s3
 
 router = APIRouter(

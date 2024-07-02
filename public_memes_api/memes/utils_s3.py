@@ -2,7 +2,9 @@ import httpx
 from fastapi import UploadFile
 
 from public_memes_api.config.config import PRIVATE_MEDIA_SERVICE_URL
-from public_memes_api.memes.exceptions import MemeImageDeleteHTTTPException, AddingMemePictureHTTTPException, MemeImageHTTTPException
+from public_memes_api.memes.exceptions import (AddingMemePictureHTTTPException,
+                                               MemeImageDeleteHTTTPException,
+                                               MemeImageHTTTPException)
 
 
 async def delete_image_from_s3(image_name: str) -> None:

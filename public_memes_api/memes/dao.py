@@ -1,6 +1,6 @@
-from typing import List, Dict, Any
-import pydantic
+from typing import Any, Dict, List
 
+import pydantic
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 

@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 from moto import mock_aws
+
 from private_media_service.config.config import MODE, LOGIN_S3, PASSWORD_S3, HOST_S3
 
 

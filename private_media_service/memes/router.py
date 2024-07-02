@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Response, status
-from starlette.responses import StreamingResponse
 import mimetypes
+
+from fastapi import (APIRouter, File, HTTPException, Response, UploadFile,
+                     status)
+from starlette.responses import StreamingResponse
 
 from private_media_service.s3_storage.config_s3 import s3_client
 

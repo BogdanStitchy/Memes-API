@@ -1,14 +1,10 @@
+from typing import Any, Dict, List, Optional
+
 from public_memes_api.memes.dao import MemesDAO
 from public_memes_api.memes.exceptions import (
-    DaoMethodException,
-    IncorrectMemeIdHTTTPException,
-    AddingMemeMetadataHTTTPException,
-    MemeMetadataHTTTPException,
-    MemesNotFoundHTTTPException,
-    MemeMetadataDeleteHTTTPException,
-)
-from typing import List, Dict, Any, Optional
-
+    AddingMemeMetadataHTTTPException, DaoMethodException,
+    IncorrectMemeIdHTTTPException, MemeMetadataDeleteHTTTPException,
+    MemeMetadataHTTTPException, MemesNotFoundHTTTPException)
 from public_memes_api.memes.schemas import MemeInDB
 
 
