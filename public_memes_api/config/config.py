@@ -25,6 +25,7 @@ TEST_HOST = os.environ['TEST_HOST']
 TEST_PORT = os.environ['TEST_PORT']
 
 HOST_REDIS = os.environ['HOST_REDIS']
+SENTRY_DNS = os.environ['SENTRY_DNS']
 
 PRIVATE_MEDIA_SERVICE_URL = os.environ['PRIVATE_MEDIA_SERVICE_URL']
 
