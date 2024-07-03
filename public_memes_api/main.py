@@ -16,11 +16,12 @@ from public_memes_api.memes.router import router
 
 app = FastAPI()
 
-sentry_sdk.init(
-    dsn=SENTRY_DNS,
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-)
+if SENTRY_DNS != "_":  # SENTRY_DNS - приватный днс
+    sentry_sdk.init(
+        dsn=SENTRY_DNS,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 app.include_router(router)
 
