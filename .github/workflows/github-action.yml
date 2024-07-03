@@ -31,6 +31,7 @@ env:
   TEST_HOST: ${{ secrets.TEST_HOST }}
   TEST_PORT: ${{ secrets.TEST_PORT }}
 
+  PRIVATE_MEDIA_SERVICE_URL: ${{secrets.PRIVATE_MEDIA_SERVICE_URL}}
   HOST_REDIS: ${{ secrets.HOST_REDIS }}
   SENTRY_DNS: ${{ secrets.SENTRY_DNS }}
 
