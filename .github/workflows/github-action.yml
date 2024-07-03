@@ -1,0 +1,90 @@
+name: Meme API CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+env:
+  MODE: ${{ secrets.MODE }}
+  LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+
+  LOGIN_DB: ${{ secrets.LOGIN_DB }}
+  PASSWORD_DB: ${{ secrets.PASSWORD_DB }}
+  NAME_DB: ${{ secrets.NAME_DB }}
+  HOST: ${{ secrets.HOST }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  DIALECT_DB: ${{ secrets.DIALECT_DB }}
+  DRIVER_DB: ${{ secrets.DRIVER_DB }}
+
+  LOGIN_S3: ${{ secrets.LOGIN_S3 }}
+  PASSWORD_S3: ${{ secrets.PASSWORD_S3 }}
+  HOST_S3: ${{ secrets.HOST_S3 }}
+
+  TEST_LOGIN_DB: ${{ secrets.TEST_LOGIN_DB }}
+  TEST_PASSWORD_DB: ${{ secrets.TEST_PASSWORD_DB }}
+  TEST_NAME_DB: ${{ secrets.TEST_NAME_DB }}
+  TEST_HOST: ${{ secrets.TEST_HOST }}
+  TEST_PORT: ${{ secrets.TEST_PORT }}
+
+  HOST_REDIS: ${{ secrets.HOST_REDIS }}
+  SENTRY_DNS: ${{ secrets.SENTRY_DNS }}
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_LOGIN_DB }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_PASSWORD_DB }}
+          POSTGRES_DB: ${{ secrets.TEST_NAME_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('public_memes_api/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f public_memes_api/requirements.txt ]; then pip install -r public_memes_api/requirements.txt; fi
+
+      - name: test private service
+        run: |
+          pytest -v -s -p no:warnings private_media_service/tests
+
+      - name: test public service
+        run: |
+          pytest -v -s -p no:warnings public_memes_api/tests
