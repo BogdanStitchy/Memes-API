@@ -17,8 +17,8 @@ async def test_download_file(async_client: AsyncClient):
 async def test_get_list_files(async_client: AsyncClient):
     response = await async_client.get("/s3_memes/files")
     assert response.status_code == 200
-    response_data = response.json()
-    files = response_data.get("files", [])
+    files = response.json()
+    assert isinstance(files, list)
     assert 'test.png' in files
 
 
@@ -28,6 +28,5 @@ async def test_delete_file(async_client: AsyncClient):
 
     response = await async_client.get("/s3_memes/files")
     assert response.status_code == 200
-    response_data = response.json()
-    files = response_data.get("files", [])
+    files = response.json()
     assert 'test.png' not in files
